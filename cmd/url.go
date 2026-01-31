@@ -1,0 +1,54 @@
+package cmd
+
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"path/filepath"
+
+	"github.com/adrg/xdg"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var ErrInvalidUrl = errors.New("invalid url passed")
+var ErrSetUrl = errors.New("failed to set url")
+
+var urlCmd = &cobra.Command{
+	Use:   "url [url to use]",
+	Short: "set and save url to config file",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+			return err
+		}
+
+		_, err := url.ParseRequestURI(args[0])
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
+		}
+
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		viper.Set("url", args[0])
+
+		configPath, err := xdg.ConfigFile(filepath.Join(CONFIG_DIR, CONFIG_FILENAME))
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrSetUrl, err)
+		}
+
+		fmt.Println(configPath)
+
+		if err := viper.WriteConfigAs(configPath); err != nil {
+			return fmt.Errorf("%w: %w", ErrSetUrl, err)
+		}
+
+		fmt.Println("url saved to config")
+
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(urlCmd)
+}
