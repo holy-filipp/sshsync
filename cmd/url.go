@@ -14,38 +14,44 @@ import (
 var ErrInvalidUrl = errors.New("invalid url passed")
 var ErrSetUrl = errors.New("failed to set url")
 
+func setUrlInConfig(url string) error {
+	viper.Set("url", url)
+
+	configPath, err := xdg.ConfigFile(filepath.Join(CONFIG_DIR, CONFIG_FILENAME))
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrSetUrl, err)
+	}
+
+	fmt.Println(configPath)
+
+	if err := viper.WriteConfigAs(configPath); err != nil {
+		return fmt.Errorf("%w: %w", ErrSetUrl, err)
+	}
+
+	fmt.Println("url saved to config")
+
+	return nil
+}
+
+func validateUrlArg(cmd *cobra.Command, args []string) error {
+	if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+		return err
+	}
+
+	_, err := url.ParseRequestURI(args[0])
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
+	}
+
+	return nil
+}
+
 var urlCmd = &cobra.Command{
 	Use:   "url [url to use]",
 	Short: "set and save url to config file",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
-			return err
-		}
-
-		_, err := url.ParseRequestURI(args[0])
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
-		}
-
-		return nil
-	},
+	Args:  validateUrlArg,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		viper.Set("url", args[0])
-
-		configPath, err := xdg.ConfigFile(filepath.Join(CONFIG_DIR, CONFIG_FILENAME))
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrSetUrl, err)
-		}
-
-		fmt.Println(configPath)
-
-		if err := viper.WriteConfigAs(configPath); err != nil {
-			return fmt.Errorf("%w: %w", ErrSetUrl, err)
-		}
-
-		fmt.Println("url saved to config")
-
-		return nil
+		return setUrlInConfig(args[0])
 	},
 }
 
