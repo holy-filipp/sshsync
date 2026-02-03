@@ -3,11 +3,13 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 var ErrExecutingCommand = errors.New("failed to execute command")
@@ -15,10 +17,27 @@ var ErrGetExecutable = errors.New("failed to get executable")
 var ErrCrontab = errors.New("failed to write crontab")
 
 var crontabCmd = &cobra.Command{
-	Use:   "crontab",
+	Use:   "crontab [optional url]",
 	Short: "add sync job to user's cron",
-	Args:  validateUrlArg,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return nil
+		}
+
+		_, err := url.ParseRequestURI(args[0])
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
+		}
+
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			if err := setUrlInConfig(args[0]); err != nil {
+				return fmt.Errorf("%w: %w", ErrSetUrl, err)
+			}
+		}
+
 		progPath, err := os.Executable()
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrGetExecutable, err)
@@ -26,17 +45,24 @@ var crontabCmd = &cobra.Command{
 
 		progDir := filepath.Dir(progPath)
 
-		currentCron, err := exec.Command("/bin/sh", "-c", "crontab -l").Output()
-		if err != nil {
-			return fmt.Errorf("%w: %w", ErrExecutingCommand, err)
+		command := fmt.Sprintf("* * * * * %s do >> %s 2>&1\n", progPath, filepath.Join(progDir, "sshsync_crontab.log"))
+
+		currentCron, err := exec.Command("/bin/sh", "-c", "crontab -l").CombinedOutput()
+		if err != nil && !strings.Contains(string(currentCron), "no crontab for") {
+			return fmt.Errorf("%w: %s: %w: %s", ErrExecutingCommand, "crontab -l", err, string(currentCron))
+		}
+
+		if strings.Contains(string(currentCron), command) {
+			fmt.Println("crontab already exists")
+			return nil
 		}
 
 		var cron strings.Builder
-		if !strings.HasPrefix(string(currentCron), "no crontab for") {
+		if !strings.Contains(string(currentCron), "no crontab for") {
 			cron.Write(currentCron)
 		}
 
-		cron.WriteString(fmt.Sprintf("\n* * * * * %s do >> %s 2>&1", progPath, filepath.Join(progDir, "sshsync_crontab.log")))
+		cron.WriteString(command)
 
 		writeCronCmd := exec.Command("/bin/sh", "-c", "crontab -")
 		writeCronCmd.Stdin = strings.NewReader(cron.String())
@@ -48,10 +74,6 @@ var crontabCmd = &cobra.Command{
 
 		if string(writeCronOut) != "" {
 			return fmt.Errorf("%w: %s", ErrCrontab, writeCronOut)
-		}
-
-		if err := setUrlInConfig(args[0]); err != nil {
-			return fmt.Errorf("%w: %w", ErrSetUrl, err)
 		}
 
 		fmt.Println("added sshsync to user's crontab")

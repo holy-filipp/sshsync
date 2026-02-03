@@ -33,23 +33,21 @@ func setUrlInConfig(url string) error {
 	return nil
 }
 
-func validateUrlArg(cmd *cobra.Command, args []string) error {
-	if err := cobra.ExactArgs(1)(cmd, args); err != nil {
-		return err
-	}
-
-	_, err := url.ParseRequestURI(args[0])
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
-	}
-
-	return nil
-}
-
 var urlCmd = &cobra.Command{
 	Use:   "url [url to use]",
 	Short: "set and save url to config file",
-	Args:  validateUrlArg,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+			return err
+		}
+
+		_, err := url.ParseRequestURI(args[0])
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
+		}
+
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return setUrlInConfig(args[0])
 	},
