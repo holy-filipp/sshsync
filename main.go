@@ -1,6 +1,6 @@
 package main
 
-import "sshsync/cmd"
+import "github.com/holy-filipp/sshsync/cmd"
 
 func main() {
 	cmd.Execute()
