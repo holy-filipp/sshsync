@@ -1,4 +1,4 @@
-module sshsync
+module github.com/holy-filipp/sshsync
 
 go 1.25
 
