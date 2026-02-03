@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/holy-filipp/sshsync/lib"
 	"github.com/spf13/viper"
 	"io"
 	"net/http"
@@ -37,12 +38,16 @@ var doCmd = &cobra.Command{
 		}
 
 		u := viper.GetString("url")
-		_, err = url.ParseRequestURI(u)
+		cacheBustUrl, err := url.Parse(u)
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrInvalidUrl, err)
 		}
 
-		resp, err := http.Get(u)
+		q := cacheBustUrl.Query()
+		q.Set("kacache", lib.RandStringBytes(10))
+		cacheBustUrl.RawQuery = q.Encode()
+
+		resp, err := http.Get(cacheBustUrl.String())
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrCantFetch, err)
 		}
