@@ -3,12 +3,11 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"log/slog"
-	"os"
-
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log/slog"
+	"os"
 )
 
 const CONFIG_DIR = "sshsync"
@@ -22,15 +21,12 @@ var rootCmd = &cobra.Command{
 	Use:   "sshsync",
 	Short: "sshsync is a tool for syncing ssh authorized_keys on multiple machines",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(viper.GetString("url"))
+		slog.Info(fmt.Sprintf("sshsync uses URL %s", viper.GetString("url")))
 	},
 }
 
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		slog.Error(err.Error())
-		os.Exit(1)
-	}
+func Execute() error {
+	return rootCmd.Execute()
 }
 
 func initConfig() error {
@@ -41,15 +37,11 @@ func initConfig() error {
 		return fmt.Errorf("%w: %w", ErrConfigInit, err)
 	}
 
-	slog.Info("config path defined", "path", configPath)
-
 	viper.AddConfigPath(configPath)
 
 	if err := viper.ReadInConfig(); err != nil {
 		var fileNotFound viper.ConfigFileNotFoundError
-		if errors.As(err, &fileNotFound) {
-			slog.Warn("config file not found")
-		} else {
+		if !errors.As(err, &fileNotFound) {
 			return fmt.Errorf("%w: %w", ErrConfigInit, err)
 		}
 	}

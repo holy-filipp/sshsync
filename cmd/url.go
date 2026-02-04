@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path/filepath"
 
@@ -22,13 +23,11 @@ func setUrlInConfig(url string) error {
 		return fmt.Errorf("%w: %w", ErrSetUrl, err)
 	}
 
-	fmt.Println(configPath)
-
 	if err := viper.WriteConfigAs(configPath); err != nil {
 		return fmt.Errorf("%w: %w", ErrSetUrl, err)
 	}
 
-	fmt.Println("url saved to config")
+	slog.Info("url set success")
 
 	return nil
 }

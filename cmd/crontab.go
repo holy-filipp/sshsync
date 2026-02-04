@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
@@ -53,7 +54,7 @@ var crontabCmd = &cobra.Command{
 		}
 
 		if strings.Contains(string(currentCron), command) {
-			fmt.Println("crontab already exists")
+			slog.Info("crontab job already exists")
 			return nil
 		}
 
@@ -76,7 +77,7 @@ var crontabCmd = &cobra.Command{
 			return fmt.Errorf("%w: %s", ErrCrontab, writeCronOut)
 		}
 
-		fmt.Println("added sshsync to user's crontab")
+		slog.Info("added job to user's crontab")
 
 		return nil
 	},

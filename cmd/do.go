@@ -6,6 +6,7 @@ import (
 	"github.com/holy-filipp/sshsync/lib"
 	"github.com/spf13/viper"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,7 +34,6 @@ var doCmd = &cobra.Command{
 		sshDirPath := filepath.Join(usr.HomeDir, ".ssh")
 
 		if _, err := os.Stat(sshDirPath); os.IsNotExist(err) {
-			fmt.Printf("%s dir doesn't exist\n", sshDirPath)
 			return ErrSshDirDoesntExist
 		}
 
@@ -66,7 +66,7 @@ var doCmd = &cobra.Command{
 			return fmt.Errorf("%w: %w", ErrCantWriteFile, err)
 		}
 
-		fmt.Println("authorized_keys synced")
+		slog.Info("sshsync success")
 
 		return nil
 	},
